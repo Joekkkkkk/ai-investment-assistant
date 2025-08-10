@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI投资策略助手</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .input-panel {
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .input-group input, .input-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus, .input-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .risk-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(to right, #4CAF50, #FFC107, #F44336);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .risk-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .dashboard {
+            display: none;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-top: 25px;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px 30px 60px 30px; /* 增加所有方向的padding */
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            height: 580px; /* 大幅增加高度 */
+        }
+
+        #performanceChart {
+            max-height: 480px !important; /* 相应调整canvas高度 */
+            width: 100% !important;
+        }
+
+        .stats-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .recommendations {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            grid-column: 1 / -1;
+        }
+
+        .recommendation-item {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
+        .recommendation-item h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .recommendation-item p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .portfolio-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .portfolio-table th,
+        .portfolio-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .portfolio-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AI投资策略助手</h1>
+            <p>基于机器学习的智能投资组合优化</p>
+        </div>
+
+        <div class="input-panel">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="input-group">
+                    <label for="stockPool">股票池 (用逗号分隔)</label>
+                    <input type="text" id="stockPool" placeholder="例: AAPL,GOOGL,MSFT,TSLA,AMZN" 
+                           value="AAPL,GOOGL,MSFT,TSLA,AMZN">
+                </div>
+                
+                <div class="input-group">
+                    <label for="investment">投资金额 ($)</label>
+                    <input type="number" id="investment" placeholder="10000" value="10000">
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="riskTolerance">风险偏好: <span id="riskLabel">中等</span></label>
+                <input type="range" id="riskTolerance" min="1" max="10" value="5" class="risk-slider">
+            </div>
+
+            <div class="input-group">
+                <label for="apiKey">Tiingo API 密钥 (可选)</label>
+                <input type="password" id="apiKey" placeholder="输入你的Tiingo API密钥">
+            </div>
+
+            <button class="analyze-btn" onclick="startAnalysis()">
+                🚀 开始AI分析
+            </button>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>AI正在分析市场数据并优化投资组合...</p>
+        </div>
+
+        <div id="dashboard" class="dashboard">
+            <div class="chart-container">
+                <h2 style="margin-bottom: 20px;">📈 投资组合表现</h2>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <div class="stats-panel">
+                <h2 style="margin-bottom: 20px;">📊 关键指标</h2>
+                
+                <div class="stat-card">
+                    <h3 id="totalReturn">+0.00%</h3>
+                    <p>总收益率</p>
+                </div>
+                
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <h3 id="sharpeRatio">0.00</h3>
+                    <p>夏普比率</p>
+                </div>
+                
+                <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                    <h3 id="maxDrawdown">-0.00%</h3>
+                    <p>最大回撤</p>
+                </div>
+
+                <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <h3 id="volatility">0.00%</h3>
+                    <p>年化波动率</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="recommendations" class="recommendations" style="display: none;">
+            <h2 style="margin-bottom: 20px;">🎯 AI投资建议</h2>
+            <div id="recommendationsList"></div>
+            
+            <h3 style="margin: 25px 0 15px 0;">💼 推荐投资组合配置</h3>
+            <table class="portfolio-table" id="portfolioTable">
+                <thead>
+                    <tr>
+                        <th>股票代码</th>
+                        <th>公司名称</th>
+                        <th>建议权重</th>
+                        <th>投资金额</th>
+                        <th>预期收益</th>
+                        <th>风险等级</th>
+                    </tr>
+                </thead>
+                <tbody id="portfolioBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="investment-assistant.js"></script>
+</body>
+</html>
